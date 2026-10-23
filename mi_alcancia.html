@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101114">
+<title>Mi Alcancía</title>
+<style>
+  :root { color-scheme: dark; --bg:#101114; --card:#1b1d22; --muted:#a7abb5; --text:#f7f7f8; --accent:#b9f3cf; --line:#30333b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; min-height:100vh; }
+  main { max-width:460px; margin:0 auto; padding:28px 18px calc(28px + env(safe-area-inset-bottom)); }
+  .top { display:flex; align-items:center; gap:12px; margin:8px 0 22px; }
+  .pig { width:48px;height:48px;border-radius:16px;background:#292d34;display:grid;place-items:center;font-size:25px; }
+  h1 { margin:0; font-size:22px; letter-spacing:-.4px; }
+  .sub { color:var(--muted); font-size:13px; margin-top:4px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:24px; padding:22px; margin-bottom:14px; }
+  .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:1.2px; }
+  .total { font-size:clamp(40px,12vw,56px); font-weight:750; letter-spacing:-2px; margin:10px 0 5px; overflow-wrap:anywhere; }
+  .currency { color:var(--muted); font-size:13px; }
+  .progressline { display:flex; justify-content:space-between; gap:10px; font-size:13px; margin:22px 0 9px; }
+  .progress { height:9px; border-radius:99px; background:#343740; overflow:hidden; }
+  .bar { height:100%; width:0%; background:var(--accent); border-radius:99px; transition:width .2s; }
+  .remaining { color:var(--muted); font-size:12px; margin-top:9px; }
+  .quick { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:14px; }
+  button { border:0; border-radius:14px; min-height:48px; padding:12px 10px; font-size:15px; font-weight:650; cursor:pointer; }
+  .quick button { background:var(--accent); color:#101a13; }
+  .sectiontitle { font-size:15px; font-weight:700; margin:0 0 13px; }
+  .entry { display:flex; gap:8px; }
+  input { min-width:0; width:100%; background:#111216; border:1px solid #3b3e47; color:var(--text); border-radius:13px; padding:13px; font-size:16px; outline:none; }
+  input:focus { border-color:var(--accent); }
+  .add { background:var(--accent); color:#101a13; white-space:nowrap; }
+  .secondary { background:#30333b; color:var(--text); }
+  .danger { background:#3a252a; color:#ffb7c0; }
+  .actions { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:10px; }
+  .goalrow { display:flex; gap:8px; align-items:center; margin-top:10px; }
+  .goalrow button { background:#30333b; color:var(--text); }
+  .note { font-size:12px; color:var(--muted); line-height:1.45; margin:12px 2px 0; }
+  .status { min-height:18px; font-size:12px; color:var(--accent); margin-top:9px; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div class="pig">🐷</div>
+    <div><h1>Mi Alcancía</h1><div class="sub">Tu plata, sin estadísticas raras</div></div>
+  </header>
+
+  <section class="card">
+    <div class="label">Llevás ahorrado</div>
+    <div class="total" id="total">$0</div>
+    <div class="currency">pesos uruguayos · UYU</div>
+    <div class="progressline"><span>Meta del iPhone</span><strong id="percent">0%</strong></div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="remaining" id="remaining">Te falta $46.000</div>
+  </section>
+
+  <div class="quick">
+    <button data-add="50">+ $50</button>
+    <button data-add="100">+ $100</button>
+    <button data-add="500">+ $500</button>
+  </div>
+
+  <section class="card">
+    <h2 class="sectiontitle">Agregar o restar plata</h2>
+    <div class="entry">
+      <input id="amount" type="number" inputmode="numeric" min="1" step="1" placeholder="Cantidad en pesos">
+      <button class="add" id="add">Sumar</button>
+    </div>
+    <div class="actions">
+      <button class="secondary" id="subtract">Restar cantidad</button>
+      <button class="secondary" id="editgoal">Cambiar meta</button>
+    </div>
+    <div class="status" id="status" aria-live="polite"></div>
+  </section>
+
+  <p class="note">El saldo y la meta se guardan en este navegador en este dispositivo. No borres los datos del navegador si querés conservarlos. Si abrís el archivo en otro navegador o dispositivo, el saldo puede no aparecer.</p>
+</main>
+<script>
+(() => {
+  const KEY = 'mi-alcancia-uy-v1';
+  const defaultState = { total: 0, goal: 46000 };
+  let state = { ...defaultState };
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (saved && Number.isFinite(saved.total) && Number.isFinite(saved.goal)) state = saved;
+  } catch (_) {}
+  const $ = id => document.getElementById(id);
+  const money = n => '$' + Math.round(n).toLocaleString('es-UY');
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (_) {}
+    render();
+  }
+  function render() {
+    $('total').textContent = money(state.total);
+    const pct = state.goal > 0 ? Math.min(100, Math.round(state.total / state.goal * 100)) : 0;
+    $('percent').textContent = pct + '%';
+    $('bar').style.width = pct + '%';
+    $('remaining').textContent = state.total >= state.goal
+      ? 'Meta alcanzada. Tremendo.'
+      : 'Te falta ' + money(state.goal - state.total);
+  }
+  function amount() {
+    const n = Number($('amount').value);
+    return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
+  }
+  function change(delta) {
+    state.total = Math.max(0, state.total + delta);
+    $('status').textContent = delta >= 0 ? 'Plata sumada.' : 'Plata restada.';
+    $('amount').value = '';
+    save();
+  }
+  document.querySelectorAll('[data-add]').forEach(btn => btn.addEventListener('click', () => change(Number(btn.dataset.add))));
+  $('add').addEventListener('click', () => amount() ? change(amount()) : $('status').textContent = 'Poné una cantidad mayor que cero.');
+  $('subtract').addEventListener('click', () => amount() ? change(-amount()) : $('status').textContent = 'Poné una cantidad mayor que cero.');
+  $('editgoal').addEventListener('click', () => {
+    const value = prompt('¿Cuál es tu meta en pesos uruguayos?', String(state.goal));
+    if (value === null) return;
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) { state.goal = Math.round(n); $('status').textContent = 'Meta actualizada.'; save(); }
+    else $('status').textContent = 'La meta tiene que ser mayor que cero.';
+  });
+  render();
+})();
+</script>
+</body>
+</html>

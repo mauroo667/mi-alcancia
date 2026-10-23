@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101114">
+<title>Mi Alcancía</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101114;color:#f7f7f8;font-family:-apple-system,sans-serif;padding:24px 18px}
+main{max-width:460px;margin:auto}
+h1{font-size:26px}
+.card{background:#1b1d22;border:1px solid #30333b;border-radius:24px;padding:22px;margin:16px 0}
+.label{color:#a7abb5;font-size:13px}
+.total{font-size:48px;font-weight:750;margin:12px 0}
+.muted{color:#a7abb5;font-size:13px}
+.progress{height:9px;background:#343740;border-radius:20px;overflow:hidden;margin:12px 0}
+.bar{height:100%;width:0;background:#b9f3cf}
+.row{display:flex;gap:8px;margin:10px 0}
+button{border:0;border-radius:13px;padding:13px 10px;font-size:15px;font-weight:bold;cursor:pointer}
+.quick{flex:1;background:#b9f3cf;color:#101a13}
+.secondary{flex:1;background:#30333b;color:white}
+input{width:100%;min-width:0;background:#111216;color:white;border:1px solid #3b3e47;border-radius:13px;padding:13px;font-size:16px}
+#sum{background:#b9f3cf;color:#101a13}
+</style>
+</head>
+<body>
+<main>
+<h1>🐷 Mi Alcancía</h1>
+<p class="muted">Tu plata para el iPhone</p>
+
+<section class="card">
+<div class="label">LLEVÁS AHORRADO</div>
+<div class="total" id="total">$0</div>
+<div class="muted">Pesos uruguayos</div>
+<div class="row">
+<span class="muted">Meta del iPhone</span>
+<strong id="percent">0%</strong>
+</div>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<div class="muted" id="remaining">Te falta $46.000</div>
+</section>
+
+<div class="row">
+<button class="quick" onclick="change(50)">+$50</button>
+<button class="quick" onclick="change(100)">+$100</button>
+<button class="quick" onclick="change(500)">+$500</button>
+</div>
+
+<section class="card">
+<h3>Agregar o restar plata</h3>
+<div class="row">
+<input id="amount" type="number" min="1" placeholder="Cantidad en $">
+</div>
+<div class="row">
+<button id="sum" class="quick" onclick="customChange(1)">Sumar</button>
+<button class="secondary" onclick="customChange(-1)">Restar</button>
+</div>
+<div class="row">
+<button class="secondary" onclick="setGoal()">Cambiar meta</button>
+<button class="secondary" onclick="resetTotal()">Reiniciar</button>
+</div>
+<p class="muted" id="status"></p>
+</section>
+</main>
+
+<script>
+let total=Number(localStorage.getItem("alcancia_total"))||0;
+let goal=Number(localStorage.getItem("alcancia_meta"))||46000;
+
+function money(n){
+ return "$"+Math.round(n).toLocaleString("es-UY");
+}
+
+function render(){
+ document.getElementById("total").textContent=money(total);
+ let pct=goal>0?Math.min(100,Math.round(total/goal*100)):0;
+ document.getElementById("percent").textContent=pct+"%";
+ document.getElementById("bar").style.width=pct+"%";
+ document.getElementById("remaining").textContent=
+ total>=goal?"¡Llegaste a tu meta!":"Te falta "+money(goal-total);
+ localStorage.setItem("alcancia_total",total);
+ localStorage.setItem("alcancia_meta",goal);
+}
+
+function change(n){
+ total=Math.max(0,total+n);
+ document.getElementById("status").textContent=
+ n>=0?"Plata sumada":"Plata restada";
+ render();
+}
+
+function customChange(direction){
+ let input=document.getElementById("amount");
+ let n=Number(input.value);
+ if(!Number.isFinite(n)||n<=0){
+  document.getElementById("status").textContent="Escribí una cantidad válida";
+  return;
+ }
+ change(Math.round(n)*direction);
+ input.value="";
+}
+
+function setGoal(){
+ let answer=prompt("¿Cuál es tu meta en pesos?",goal);
+ if(answer===null)return;
+ let n=Number(answer);
+ if(Number.isFinite(n)&&n>0){
+  goal=Math.round(n);
+  render();
+ }
+}
+
+function resetTotal(){
+ if(confirm("¿Querés borrar todo el ahorro acumulado?")){
+  total=0;
+  render();
+ }
+}
+
+render();
+</script>
+</body>
+</html>
